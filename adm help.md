@@ -86,3 +86,14 @@ ctrl+f11
 Носитель MySQL server Можно посмотреть при установки, называется медиа обычно в корне.
 Ставить оттуда.
 ================================================
+Создание keytab-файла
+Keytab-файлы используются в удаленных системах, поддерживающих Kerberos, для аутентификации пользователей без ввода пароля., содержащий имена субъекта-службы (далее также "Spn"). 
+
+setspn -A HTTP/"workstation.domain@domain" "domain\username"
+ktpass /mapuser "domain\username"  /princ HTTP/workstation.domain  /ptype KRB5_NT_PRINCIPAL /pass "password"  /crypto ALL  /out filename.keytab +answer
+
+workstation.domain - имя рабочей станции
+domain\username - имя пользователя
+password - пароль пользователя
+Так же может присутствовать параметр target (один из dc)
+==============================================
