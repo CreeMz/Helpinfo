@@ -141,3 +141,50 @@ enter-pssession -computername <Имя нужного пк>       (подключ
 tasklist | more         (отображение списка процессов)
 taskkill /f (принудительное завершение) /pid <PID нужного процесса>
 =======================================
+Закрытие открытого файла на linux (SMB)
+
+#Отображает информацию о файле который надо закрыть (нужен pid)
+sudo smbstatus -L | grep -i "Часть_имени_файла"
+
+#Показывает у какого пользователя открыт файл (pid без кавычек)
+sudo smbstatus -u | grep "pid"
+
+#Закрывает сессию smb по "pid" (писать без кавычек)
+kill -9 "pid"
+=========================================================
+Ввод астры в домен
+1. sudo nano /etc/ssh/sshd_config
+	1.1 Поменять значение PasswordAuthentication на yes
+	1.2 sudo systemctl restart sshd
+2. sudo hostnamectl set-hostname имя_вм
+3. sudo nano /etc/hosts
+	3.1 Поменять старое имя машины на новое, добавить
+4. sudo nmtui
+	4.1 Задать новый ip (посмотреть в облаке, маска 24) и шлюз (172.22.157.13)
+5. sudo reboot
+6. sudo nano /etc/samba/smb/conf
+	6.1 Привести блок homes к виду:
+
+[homes]
+    comment = Home Directories
+    browseable = No
+#    create mask = 0700
+#    directory mask = 0700
+    valid users = %S, %D%w%S
+    read only = No
+    inherit = Yes
+7. astra-winbind -s
+	5.1 astra-winbind -d <домен> -dc <домен контроллер> -u уз_админа_домена
+8. sudo reboot
+=========================================================
+Копирование прав на одном пк PShell
+
+Get-ACL <Ппуть к исходной папке> | Set-Acl <Путь к конечной папке>
+========================================================
+Команда для активации microsoft:
+iwr -useb https://get.activated.win | iex
+========================================================
+CONTAINER ID NAME CPU % MEM USAGE / LIMIT MEM % NET I/O BLOCK I/O PIDS
+# docker ps -q|xargs docker stats --no-stream
+========================================================
+

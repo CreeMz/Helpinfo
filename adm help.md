@@ -6,6 +6,24 @@ Get-ADGroupMember - Указывает из какой группы выгруж
 ft name - говорит о том чтобы были выгружены только имена пользователей
 out-file - создает файл с расширением .CSV и помещает выгруженных пользователей туда, можно указать путь, в данном случае создает на рабочем столе с именем Admins 
 ========================================
+Get-ADComputer -Filter {enabled -eq $true} -searchbase "OU=Сочи,OU=Workstations,DC=OCRV,DC=COM,DC=RZD" | FT dNSHostName, operatingSystem  | out-file D:\IB\PC\Сочи.csv
+
+$FromOU = OU=Санкт-Петербург,OU=Workstations,DC=OCRV,DC=COM,DC=RZD
+Get-ADComputer -SearchBase $FromOU -Filter {Enabled -eq $true} | FT dNSHostName | Out-File -FilePath C:\script\spb.txt
+$PClist = gc "C:\script\spb.txt"
+foreach ($PC in $PClist) {
+wecutil ss <название подписки> /aes /esa:$PC /ese
+}
+
+Выгрузка компьютеров из AD с определенными параметрами:
+-Filter {enabled -eq $true} - выбирает только включенные компьютеры в AD
+-searchbase "OU=workstations,DC=OCRV,DC=COM,DC=RZD" - Где искать
+-Properties Name,Operatingsystem, IPv4Address, distinguishedName, description - по каким атрибутам делать выборку
+Select-Object - выбирает отобранные атрибуты, могут отличаться от properties
+export-csv -Path D:\IB\PC\PC.csv -NoTypeInformation -Encoding UTF8 -Delimiter ";" - вывод в csv-файл по пути d:\ib\PC\pc.csv !Обязательно укаать делиметр, иначе все будет в одном столбце.
+
+Get-ADComputer -Filter {enabled -eq $true} -searchbase "OU=workstations,DC=OCRV,DC=COM,DC=RZD" -Properties Name,Operatingsystem, IPv4Address, distinguishedName, description | Select-Object -Property Name,Operatingsystem, IPv4Address, distinguishedName, description | export-csv -Path D:\IB\PC\PC.csv -NoTypeInformation -Encoding UTF8 -Delimiter ";"
+========================================
 Для принудительного запуска поиска обновлений: wuauclt /detectnow
 
 Бывает что проверка обновлений говорит что таковых нет, но это не так. Для сброса авторизации и соответственно списка полученных обновлений: wuauclt /resetAuthorization
@@ -75,10 +93,7 @@ Get-ChildItem -Path $path -Recurse -File | ? {$_.CreationTime  -le ( (Get-Date).
 3.root.cer
 ==============================================
 Когда отваливаются клиентские лицензии 1С
-
-1. Зайти на 1cocrv
-2. Службы
-3. Перезапустить HASP Loader
+1. Перезапустить HASP Loader
 ================================================
 Ссылка на КЗД в 1с
 ctrl+f11
@@ -97,3 +112,91 @@ domain\username - имя пользователя
 password - пароль пользователя
 Так же может присутствовать параметр target (один из dc)
 ==============================================
+Закрытие открытого файла на linux (SMB)
+
+#Отображает информацию о файле который надо закрыть (нужен pid)
+sudo smbstatus -L | grep -i "Часть_имени_файла"
+
+#Показывает у какого пользователя открыт файл (pid без кавычек)
+sudo smbstatus -u | grep "pid"
+
+#Закрывает сессию smb по "pid" (писать без кавычек)
+kill -9 "pid"
+=========================================================
+Закрытие сессии на терминальном сервере через pscx PowerShell
+
+# Установка Модуля
+Install-Module Pscx -Scope CurrentUser
+
+# Обновление Модуля
+Update-Module Pscx
+
+# Просмотр всех сейссий на удаленном столе:
+Get-TerminalSession -ComputerName *Имя сервера*
+
+# Принудительное завершение сессии
+Stop-TerminalSession -ComputerName *Имя сервера* -Id *id пользователя* -force
+========================================================
+r-virt
+добавть ноду хранилище
+/usr/libexec/vstorage-ui-agent/bin/register-storage-node.sh -m 172.22.10.96 -t ключ_посмотреть_на_морде_схд
+
+добавить ноду в ha
+hastart -c cl01 -n 192.168.90.0/24
+
+
+cat /etc/vz/vz.conf - конфиг ноды
+
+prlctl restart vstorage-ui - рестарт хранилища
+vstorage -c cl01 stat      - мониторинг хранилища
+prlsrvctl problem-report -d > report.tgz      - логи
+prlctl list - машины на ноде
+prlctl migrate имя_вм ip_ноды - миграция
+
+prlctl start\stop\status имя вм  - запустить\остановит\посмотреть статус вм
+prlctl unregister имя_вм - удалить задублированную вм
+vz-guest-tools-updater имя вм   -монтирование диска со средствами управления
+shaman stat\top - статус нод и расположения вм
+
+https://docs.virtuozzo.com/virtuozzo_hybrid_server_7_users_guide/  - вики аналогичного продукта
+
+
+
+разобрать HA (запускать на конкретной ноде)
+Disable and stop HA services:
+
+# systemctl disable shaman.service
+# systemctl stop shaman.service
+# systemctl disable pdrs.service
+# systemctl stop pdrs.service
+Remove the node from the HA configuration. For example, for a node in the cluster vstor1, run:
+
+# shaman -c vstor1 leave
+=========================================================
+Конвертация диска с hyper-v на basealt с подключением к машине:
+
+1. Скопировать диск на ноду, зайти на неё по ssh, провалиться в нужную папку
+2. Выполнить команду:
+qm importdisk <id вм> <имя диска> <хранилище>
+qm importdisk 126 POSTGRES.vhdx HDD
+3. Дождаться окончания процесса конвертации.
+========================================================
+Установка python и Ansible на Astra Linux 1.7
+
+apt install pwgen wget python3 python3-pip sshpass jq
+python3 -m pip install jmespath netaddr jinja2
+========================================================
+Управление ipa\ald
+
+ipactl status - состояние домена
+sudo ipactl restart - перезапуск служб ipa
+========================================================
+Посмотреть базы и сколько в них свободного места на сервере
+
+Get-MailboxDatabase -Server mail.ocrv.com.rzd -Status | select Name, DatabaseSize, AvailableNewMailboxSpace
+========================================================
+CONTAINER ID NAME CPU % MEM USAGE / LIMIT MEM % NET I/O BLOCK I/O PIDS
+# docker ps -q|xargs docker stats --no-stream
+========================================================
+
+
