@@ -198,5 +198,18 @@ Get-MailboxDatabase -Server mail.ocrv.com.rzd -Status | select Name, DatabaseSiz
 CONTAINER ID NAME CPU % MEM USAGE / LIMIT MEM % NET I/O BLOCK I/O PIDS
 # docker ps -q|xargs docker stats --no-stream
 ========================================================
-
+На клиенте:
+sudo salt-call -c /srv/salt/standalone/config/ gp_sum.build_and_run_gp force=True
+========================================================
+На КД:
+sudo salt-call state.apply gpupdate.swp -c /srv/salt/standalone/config/ pillar='{"verbose": True, "force":True}'
+========================================================
+Время следующего запуска:
+sudo salt-call schedule.show_next_fire_time build_and_run_gp -c /srv/salt/standalone/config
+========================================================
+Конфиг расписания запуска:
+/srv/salt/standalone/config/minion.d/standalone_scheduler.conf
+========================================================
+Проверка домена:
+astra-freeipa-client -i
 
