@@ -212,4 +212,29 @@ sudo salt-call schedule.show_next_fire_time build_and_run_gp -c /srv/salt/standa
 ========================================================
 Проверка домена:
 astra-freeipa-client -i
+========================================================
+Исправление квадратов на альт-линухе в графике.
+
+chkconfig consolesaver on
+chkconfig keytable on
+fc-cache -f -v
+MicroSoft TTF Fonts поставить
+========================================================
+Форсирование политик
+На клиенте:
+вариант1 - sudo aldpro-gpupdate --gp
+вариант2 - sudo salt-call -c /srv/aldpro-salt/config gp_sum.build_and_run_gp force=True
+---------------------
+На КД:
+sudo salt-call state.apply gpupdate.swp -c /srv/salt/standalone/config/ pillar='{"verbose": True, "force":True}'
+---------------------
+Время следующего запуска:
+sudo aldpro-salt-call schedule.show_next_fire_time build_and_run_gp -c /srv/salt/standalone/config
+---------------------
+Конфиг расписания запуска:
+/srv/aldpro-salt/config/minion.d/standalone_scheduler.conf
+========================================================
+Проверка домена:
+astra-freeipa-client -i
+========================================================
 
