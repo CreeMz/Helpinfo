@@ -237,4 +237,7 @@ sudo aldpro-salt-call schedule.show_next_fire_time build_and_run_gp -c /srv/salt
 Проверка домена:
 astra-freeipa-client -i
 ========================================================
+Вывод списка вм на hyperv с путями их дисков
+$hosts = "server-01","server-02"
+Get-VMHardDiskDrive -ComputerName $hosts -VMName * | select VMname, path
 
