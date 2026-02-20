@@ -1,29 +1,3 @@
-Для выгрузки пользователей из групп AD через PowerShell
-
-get-adgroupmember 'Doc_OFUO_4_SMA-W' | ft name | out-file C:\Users\Trofimov.Aleksey\Desktop\Admins.csv
-
-Get-ADGroupMember - Указывает из какой группы выгружать пользователей
-ft name - говорит о том чтобы были выгружены только имена пользователей
-out-file - создает файл с расширением .CSV и помещает выгруженных пользователей туда, можно указать путь, в данном случае создает на рабочем столе с именем Admins 
-========================================
-Get-ADComputer -Filter {enabled -eq $true} -searchbase "OU=Сочи,OU=Workstations,DC=OCRV,DC=COM,DC=RZD" | FT dNSHostName, operatingSystem  | out-file D:\IB\PC\Сочи.csv
-
-$FromOU = OU=Санкт-Петербург,OU=Workstations,DC=OCRV,DC=COM,DC=RZD
-Get-ADComputer -SearchBase $FromOU -Filter {Enabled -eq $true} | FT dNSHostName | Out-File -FilePath C:\script\spb.txt
-$PClist = gc "C:\script\spb.txt"
-foreach ($PC in $PClist) {
-wecutil ss <название подписки> /aes /esa:$PC /ese
-}
-
-Выгрузка компьютеров из AD с определенными параметрами:
--Filter {enabled -eq $true} - выбирает только включенные компьютеры в AD
--searchbase "OU=workstations,DC=OCRV,DC=COM,DC=RZD" - Где искать
--Properties Name,Operatingsystem, IPv4Address, distinguishedName, description - по каким атрибутам делать выборку
-Select-Object - выбирает отобранные атрибуты, могут отличаться от properties
-export-csv -Path D:\IB\PC\PC.csv -NoTypeInformation -Encoding UTF8 -Delimiter ";" - вывод в csv-файл по пути d:\ib\PC\pc.csv !Обязательно укаать делиметр, иначе все будет в одном столбце.
-
-Get-ADComputer -Filter {enabled -eq $true} -searchbase "OU=workstations,DC=OCRV,DC=COM,DC=RZD" -Properties Name,Operatingsystem, IPv4Address, distinguishedName, description | Select-Object -Property Name,Operatingsystem, IPv4Address, distinguishedName, description | export-csv -Path D:\IB\PC\PC.csv -NoTypeInformation -Encoding UTF8 -Delimiter ";"
-========================================
 Для принудительного запуска поиска обновлений: wuauclt /detectnow
 
 Бывает что проверка обновлений говорит что таковых нет, но это не так. Для сброса авторизации и соответственно списка полученных обновлений: wuauclt /resetAuthorization
@@ -195,8 +169,12 @@ sudo ipactl restart - перезапуск служб ipa
 
 Get-MailboxDatabase -Server mail.ocrv.com.rzd -Status | select Name, DatabaseSize, AvailableNewMailboxSpace
 ========================================================
-CONTAINER ID NAME CPU % MEM USAGE / LIMIT MEM % NET I/O BLOCK I/O PIDS
-# docker ps -q|xargs docker stats --no-stream
+# docker ps -q|xargs docker stats --no-stream	-	Выводит данные о контейнерах в формате CONTAINER ID NAME CPU % MEM USAGE / LIMIT MEM % NET I/O BLOCK I/O PIDS
+# docker ps -a --filter volume=VOLUME_NAME_OR_MOUNT_POINT - узнать куда прикрепляется docker volume
+# docker system df -v - узнать размер и имена всех docker volume
+# docker ps --size - размер всех контейнеров
+# docker volume ls - выводит список томов
+# docker logs  --since "2026-02-18T9:00:00" --until "2026-02-19T9:00:00" "cont-name" > out-file.txt
 ========================================================
 На клиенте:
 sudo salt-call -c /srv/salt/standalone/config/ gp_sum.build_and_run_gp force=True
@@ -240,4 +218,144 @@ astra-freeipa-client -i
 Вывод списка вм на hyperv с путями их дисков
 $hosts = "server-01","server-02"
 Get-VMHardDiskDrive -ComputerName $hosts -VMName * | select VMname, path
+========================================================
+Миграция AD в AldPro
 
+На сервере aldpro
+nano /etc/bind/ipa-options-ext.conf
+dnssec-validation no;mp
+========================================================
+Шпаргалка по proxmox:
+
+ceph osd lspools - выводит список пулов
+
+копирование диска
+rbd -p NVME (pool) export vm-115-disk-3 (имя диска, можно посмотреть в /etc/pve/nodes) /mnt/pve/MSK_NAS01/images/vm-115-disk-3.raw (куда сохранять)
+
+Задание аргументов для вм
+qm set <VM_ID> --args '-<ARG_TYPE>,<+arg1;-arg2...:argN>' <parametr1 parametr2 .... parametrN>
+Пример
+qm set 101 --args '-cpu host,+vmx'
+Тип цпу в аргументе дожен совпадать с выбранным типом на вм
+
+Parametrs
+--acpi <boolean>              # Включить ACPI
+--agent <list>                # Включить агент QEMU
+--args <string>               # Произвольные аргументы QEMU (то, что вам нужно)
+--balloon <integer>           # Максимальный размер баллонной памяти
+--bios <ovmf|seabios>         # Тип BIOS
+--boot <string>               # Порядок загрузки
+--cdrom <volume>              # Привод CD-ROM
+--cicustom <string>           # Пользовательские файлы для CI
+--cipassword <string>         # Пароль для Cloud-Init
+--citype <string>             # Тип Cloud-Init конфигурации
+--cores <integer>             # Количество ядер CPU
+--cpu <string>                # Тип процессора
+--cpulimit <number>           # Лимит CPU
+--cpuunits <integer>          # Вес CPU
+--delete <string>             # Удалить параметр
+--description <string>        # Описание ВМ
+--digest <string>             # Хеш конфигурации
+--efidisk0 <volume>           # EFI диск
+--force <boolean>             # Принудительное применение
+--freeze <boolean>            # Заморозить ВМ при старте
+--hookscript <volume>         # Скрипт-хук
+--hotplug <string>            # Горячее подключение устройств
+--hugepages <integer>         # Использование hugepages
+--ide<0-3> <volume>           # IDE устройства
+--ipconfig<n> <string>        # Настройки IP для Cloud-Init
+--keyboard <string>           # Раскладка клавиатуры
+--kvm <boolean>               # Включить KVM ускорение
+--localtime <boolean>         # Использовать локальное время
+--lock <string>               # Заблокировать ВМ
+--machine <string>            # Тип машины
+--memory <integer>            # Объем памяти в МБ
+--migrate_downtime <number>   # Время простоя при миграции
+--migrate_speed <integer>     # Скорость миграции
+--name <string>               # Имя ВМ
+--net<n> <string>             # Сетевые интерфейсы
+--noout <boolean>             # Без вывода
+--numa <boolean>              # Включить NUMA
+--numkeys <integer>           # Количество ключей
+--onboot <boolean>            # Запуск при старте хоста
+--ostype <string>             # Тип гостевой ОС
+--parallel<0-3> <device>      # Параллельные порты
+--protection <boolean>        # Защита от удаления
+--reboot <boolean>            # Перезагрузка после применения
+--revert <string>             # Откатить изменения
+--sata<0-5> <volume>          # SATA устройства
+--scsi<0-30> <volume>         # SCSI устройства
+--scsihw <string>             # Тип SCSI контроллера
+--serial<0-3> <device>        # Последовательные порты
+--shares <integer>            # Общие ресурсы
+--skiplock <boolean>          # Игнорировать блокировку
+--smbios <string>             # SMBIOS настройки
+--smp <integer>               # Количество виртуальных CPU
+--snapname <string>           # Имя снапшота
+--sockets <integer>           # Количество сокетов CPU
+--spice_enhancements <string> # Улучшения SPICE
+--startdate <string>          # Дата старта
+--startup <string>            # Порядок запуска
+--storage <string>            # Хранилище по умолчанию
+--tablet <boolean>            # Устройство ввода tablet
+--tags <string>               # Теги
+--tdf <boolean>                # task distribution function
+--template <boolean>          # Сделать шаблоном
+--timeout <integer>           # Таймаут операций
+--tpmstate0 <volume>          # Состояние TPM
+--unused<0-...> <volume>      # Неиспользуемые тома
+--usb<n> <string>             # USB устройства
+--vga <string>                # Видеоадаптер
+--virtio<0-...> <volume>      # VirtIO блок-устройства
+--vmgenid <string>            # VM Generation ID
+--vmstatestorage <string>     # Хранилище для состояния ВМ
+--watchdog <device>           # Watchdog устройство
+
+Просмотр списка устройств с аргументами
+qemu-system-x86_64 - (далее TAB)
+Просмотр всех значений аргументов устройств
+qemu-system-x86_64 -cpu help 
+========================================================
+Полное восстановление grub EFI в astra Linux:
+
+1. Загружаемся с liveCD
+2. Запускаем терминал:
+3. lsblk -l # Узнаем на каких дисках у нас корневая система и boot
+4. Монтирование корневой системы
+mount /dev/sda2 /mnt          # Монтирует корневой раздел (/) в /mnt
+5. Монтирование загрузочного раздела
+	-	mount /dev/sda1 /mnt/boot      # Монтирует раздел /boot или ESP
+6. Бинд-монтирование системных каталогов
+	-	mount --bind /dev /mnt/dev     # Связывает каталог устройств
+	-	mount --bind /proc /mnt/proc   # Связывает информацию о процессах
+	-	mount --bind /sys /mnt/sys     # Связывает системные данные ядра
+7. Монтирование UEFI переменных (для UEFI систем)
+	-	mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+8. Переход в chroot-окружение
+	-	chroot /mnt
+9. Поиск и Установка/переустановка ядра (для Debian/Ubuntu)
+	-	apt search linux-image	#Поиск ядра
+	-	apt install --reinstall linux-image-<версия ядра> #Переустановка ядра
+10. Редактирование конфигурации GRUB	# Позволяет видеть другие установленные ОС (может понадобится если в загрузчике не видно ядра)
+	-	nano /etc/default/grub         # Изменить GRUB_DISABLE_OS_PROBER=false
+11. Переустановка GRUB для UEFI
+	-	grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+12. Обновление конфигурации GRUB
+	-	grub-mkconfig -o /boot/grub/grub.cfg
+13. Выход из chroot и перезагрузка
+	-	exit
+	-	reboot
+
+Как использовать?
+	1.	При ошибке "Welcome to GRUB" (нет меню загрузки) > выполните шаги 1–13.
+	2.	Если GRUB не видит ядро > шаг 9.
+	3.	Для восстановления UEFI-загрузки > шаги 1-7, 11–12.
+Примечания:
+	1.	Если /boot находится в корневом разделе, пропустите команду монтирования /boot
+	2.	Для систем с BIOS (Legacy) вместо UEFI-установки используйте:
+		-	grub-install /dev/sda
+Важные замечания:
+	1.	Все команды выполняются из LiveCD/LiveUSB среды
+	2.	Перед выполнением проверьте правильность указания разделов с помощью lsblk или fdisk -l
+	3.	Для успешной работы os-prober другие ОС должны быть на смонтированных разделах
+========================================================
