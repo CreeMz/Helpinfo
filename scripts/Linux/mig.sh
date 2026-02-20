@@ -1,4 +1,3 @@
-#OLOLOLO
 #!/bin/bash
 # backup_interactive_menu.sh
 
